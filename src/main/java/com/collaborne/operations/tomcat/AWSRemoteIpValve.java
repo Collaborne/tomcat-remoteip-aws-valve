@@ -63,22 +63,6 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 	
 	private String lastETag;
 
-	public AWSRemoteIpValve() {
-		super();
-
-		// Schedule updates to happen every few seconds.
-		updateScheduler.scheduleWithFixedDelay(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					updateIpRanges();
-				} catch (IOException e) {
-					log.warn("Cannot update AWS IP ranges", e);
-				}
-			}
-		}, 60, 60, TimeUnit.SECONDS);
-	}
-
 	@Override
 	protected void startInternal() throws LifecycleException {
 		super.startInternal();
@@ -94,6 +78,18 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 
 			log.warn("Cannot update AWS IP ranges", e);
 		}
+
+		// Schedule updates to happen every few seconds.
+		updateScheduler.scheduleWithFixedDelay(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					updateIpRanges();
+				} catch (IOException e) {
+					log.warn("Cannot update AWS IP ranges", e);
+				}
+			}
+		}, 60, 60, TimeUnit.SECONDS);
 	}
 
 	public String getIpRangesUrl() {
