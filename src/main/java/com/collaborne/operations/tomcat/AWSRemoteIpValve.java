@@ -35,8 +35,11 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.servlet.ServletException;
 
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.connector.Request;
+import org.apache.catalina.connector.Response;
 import org.apache.catalina.valves.RemoteIpValve;
 import org.apache.juli.logging.Log;
 import org.apache.juli.logging.LogFactory;
@@ -63,6 +66,11 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 	
 	private String lastETag;
 
+	/**
+	 * Trusted properties as calculated by {@#updateIpRanges()}.
+	 */
+	private volatile String awsTrustedProxies = null;
+		
 	@Override
 	protected void startInternal() throws LifecycleException {
 		super.startInternal();
@@ -212,25 +220,21 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 			}
 		}
 
-		String trustedProxies = sb.toString();
-		updateTrustedProxies(trustedProxies);
+		this.awsTrustedProxies = sb.toString();
 	}
 
-	/**
-	 * Update the internal trusted proxies using {@link #setTrustedProxies(String)}.
-	 *
-	 * If the given value matches the current value the update is avoided.
-	 *
-	 * @param trustedProxies new trusted proxies
-	 */
-	// 'synchronized' so that we can guarantee that other threads see the update
-	private synchronized void updateTrustedProxies(String trustedProxies) {
-		if (trustedProxies.equals(getTrustedProxies())) {
-			// Nothing has changed here
-			return;
+	@Override
+	public void invoke(Request request, Response response) throws IOException, ServletException {
+		// The 'trustedProxies' variable in the RemoveIpValve super class is not thread-safe,
+		// and the 'invoke' method accesses the variable directly (ie does not use the getter). So
+		// in order for this thread to see the updated value from the background thread, we need
+		// to safely copy the trusted proxies first into this thread
+		// NB: awsTrustedProxies here can only be null when the initial update failed and that update was not required via configuration.
+		if (awsTrustedProxies != null && !awsTrustedProxies.equals(getTrustedProxies())) {
+			log.info("Updating trusted proxies: " + awsTrustedProxies);
+			setTrustedProxies(awsTrustedProxies);
 		}
 
-		log.info("Updating trusted proxies: " + trustedProxies);
-		setTrustedProxies(trustedProxies);
+		super.invoke(request, response);
 	}
 }
