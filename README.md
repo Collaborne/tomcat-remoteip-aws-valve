@@ -6,7 +6,7 @@ it generates the list based on the [published IP ranges of AWS](http://docs.aws.
 
 By default only cloudfront is included, but is possible via configuration to change the services.
 
-The valve loads the IP ranges once on startup, and checks for updates [every minute](https://github.com/Collaborne/tomcat-remoteip-aws-valve/issues/3).
+The valve loads the IP ranges once on startup, and checks for updates every minute by default. The update frequency can be configured by setting the "updateInterval" (in seconds).
 
 Installation
 ------------
@@ -33,7 +33,9 @@ Configuration
           services="CLOUDFRONT"
           requestAttributesEnabled="true"
           remoteIpHeader="x-forwarded-for" protocolHeader="x-forwarded-proto"
-          requireInitialUpdateSuccess="true"/>
+          requireInitialUpdateSuccess="true"
+          updateInterval="60"
+          />
    ~~~~
 
 2. For using the remote IP addresses in the `AccessLogValve` additionally enable the `requestAttributesEnabled` attribute of the `AccessLogValve`.

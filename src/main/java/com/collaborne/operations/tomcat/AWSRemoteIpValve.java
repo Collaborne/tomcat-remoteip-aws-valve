@@ -63,6 +63,9 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 	private List<String> services = Arrays.asList(new String[] {"CLOUDFRONT"});
 	/** Whether the initial update must succeed */
 	private boolean requireInitialUpdateSuccess = true;
+
+	/** How often we should check for updates */
+	private long updateInterval = 60L;
 	
 	private String lastETag;
 
@@ -97,7 +100,7 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 					log.warn("Cannot update AWS IP ranges", e);
 				}
 			}
-		}, 60, 60, TimeUnit.SECONDS);
+		}, this.updateInterval, this.updateInterval, TimeUnit.SECONDS);
 	}
 
 	public String getIpRangesUrl() {
@@ -122,6 +125,14 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 
 	public void setRequireInitialUpdateSuccess(boolean requireInitialUpdateSuccess) {
 		this.requireInitialUpdateSuccess = requireInitialUpdateSuccess;
+	}
+
+	public Long getUpdateInterval() {
+		return updateInterval;
+	}
+
+	public void setUpdateInterval(Long updateInterval) {
+		this.updateInterval = updateInterval;
 	}
 
 	protected static void appendRangeRegularExpression(StringBuilder sb, String prefix) throws UnknownHostException {
@@ -186,6 +197,8 @@ public class AWSRemoteIpValve extends RemoteIpValve {
 	protected void updateIpRanges() throws MalformedURLException, IOException {
 		// Fetch the contents of ip-ranges.json, and find the ones for the services
 		// Schedule the update to happen
+		log.debug("Checking for updated AWS IP ranges.");
+
 		HttpURLConnection connection = (HttpURLConnection) new URL(ipRangesUrl).openConnection();
 		connection.setConnectTimeout((int) TimeUnit.SECONDS.toMillis(5));
 		if (lastETag != null) {
